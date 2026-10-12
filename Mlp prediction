@@ -1,0 +1,32 @@
+import warnings
+from pathlib import Path
+
+import joblib
+import pandas as pd
+
+warnings.filterwarnings("ignore")
+
+model = joblib.load(Path(__file__).parent / "best_mlp_model.joblib")
+
+# training-data range, used only for the note after the prediction
+RANGES = {"L": (220, 241), "m": (222, 281), "perf": (67.7, 82.1), "dia": (0.85, 1.03)}
+LABELS = {"L": "L (mm)", "m": "m (mg)", "perf": "perf (fibre %)", "dia": "dia (mm)"}
+
+def ask(label):
+    while True:
+        try:
+            return float(input(f"{label}: "))
+        except ValueError:
+            print("  Please type a number, for example 72.4")
+
+while True:
+    values = {name: ask(LABELS[name]) for name in RANGES}
+    prediction = model.predict(pd.DataFrame([values]))[0]
+    print(f"\nPredicted tensile strength Tm: {prediction:.1f} MPa")
+
+    outside = [n for n, (lo, hi) in RANGES.items() if not lo <= values[n] <= hi]
+    if outside:
+        print(f"Note: {', '.join(outside)} outside the training range, so treat this prediction with caution.")
+
+    if input("\nTry another? (y/n): ").strip().lower() != "y":
+        break
